@@ -4,7 +4,7 @@ import cvxpy as cp
 
 if __name__=="__main__":
 	
-
+	# TODO: construct a function to perform this for every value of row of measured values in the table
 	####################################################################################
 	#
 	#	Want to minimize the error expression:
@@ -91,5 +91,5 @@ if __name__=="__main__":
 	for i in range(len(sigmas)):
 		J += 0.5 * (a[i]*sigmas[i])
 
-	print("The trace is: ", np.trace(J))
+	print("The trace is: ", np.trace(J.dot(J)))
 	print("The coherency matrix is: \n", J)
