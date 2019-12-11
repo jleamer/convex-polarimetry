@@ -46,7 +46,7 @@ if __name__=="__main__":
 	]
 	soc_constraints.append(cp.SOC(y, u))
 	soc_constraints.append(y >= 0)
-	soc_constraints.append(x <= 1)
+	soc_constraints.append(cp.norm(x) <= 1)
 
 	#Read in data from excel sheet to construct q0
 	#Just for theta = 0 right now
@@ -66,7 +66,7 @@ if __name__=="__main__":
 	print("optimal y value", y.value)
 	print("optimal u value", u.value)
 	
-	#Check that the solution works
+	#Check that the solution work	
 	#	Initialize the sigmas
 	sigma0 = np.identity(2)
 	sigma1 = np.array([[1, 0],
@@ -83,6 +83,7 @@ if __name__=="__main__":
 	a2 = x.value[1] + 0j
 	a3 = x.value[2] + 0j
 	a = [a0, a1, a2, a3]
+	print(a1**2 + a2**2 + a3**2)
 
 	J = 0
 	for i in range(len(sigmas)):
