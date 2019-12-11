@@ -51,10 +51,12 @@ if __name__=="__main__":
 	#Read in data from excel sheet to construct q0
 	#Just for theta = 0 right now
 	data = pd.read_excel("11-19-19.xlsx", sheet_name='measured')
-	I = data.values[0]
-	I /= (I[0]+I[1])
+	I = data.values[9]
+	print(I)
+	I /= (I[1]+I[2])
+	print(I)
 	q0 = cp.Parameter(3)
-	q0.value = np.array([I[1]-I[0], 0.5-I[2], 0.5-I[3]])
+	q0.value = np.array([I[2]-I[1], 0.5-I[3], 0.5-I[4]])
 
 	#Create the objective and the problem
 	objective = cp.Minimize(y + q0.T@x)
@@ -66,6 +68,7 @@ if __name__=="__main__":
 	print("optimal y value", y.value)
 	print("optimal u value", u.value)
 	
+	print("norm of x: ", np.linalg.norm(x.value))
 	#Check that the solution work	
 	#	Initialize the sigmas
 	sigma0 = np.identity(2)
@@ -83,7 +86,6 @@ if __name__=="__main__":
 	a2 = x.value[1] + 0j
 	a3 = x.value[2] + 0j
 	a = [a0, a1, a2, a3]
-	print(a1**2 + a2**2 + a3**2)
 
 	J = 0
 	for i in range(len(sigmas)):
