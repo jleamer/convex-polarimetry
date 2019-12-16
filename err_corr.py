@@ -2,9 +2,10 @@ import numpy as np
 import pandas as pd
 import cvxpy as cp
 
+
+
 if __name__=="__main__":
 	
-	# TODO: construct a function to perform this for every value of row of measured values in the table
 	####################################################################################
 	#
 	#	Want to minimize the error expression:
@@ -51,24 +52,32 @@ if __name__=="__main__":
 	#Read in data from excel sheet to construct q0
 	#Just for theta = 0 right now
 	data = pd.read_excel("11-19-19.xlsx", sheet_name='measured')
-	I = data.values[9]
-	print(I)
-	I /= (I[1]+I[2])
-	print(I)
-	q0 = cp.Parameter(3)
-	q0.value = np.array([I[2]-I[1], 0.5-I[3], 0.5-I[4]])
+	I = np.array([data.values[i][1:5] for i in range(data.values.shape[0])])
+	q0_arr = []
 
-	#Create the objective and the problem
-	objective = cp.Minimize(y + q0.T@x)
-	prob = cp.Problem(objective, soc_constraints)
-	
-	prob.solve(solver=cp.CVXOPT)
-	print("status:", prob.status)
-	print("optimal x value", x.value)
-	print("optimal y value", y.value)
-	print("optimal u value", u.value)
-	
-	print("norm of x: ", np.linalg.norm(x.value))
+	for i in I:
+		#Normalize the intensities
+		i /= (i[0] + i[1])/2
+		q0 = cp.Parameter(3)
+		q0.value = np.array([i[1]-i[0], 0.5-i[2], 0.5-i[3]])
+		q0_arr.append(q0)
+
+	q0_arr = np.array(q0_arr)
+
+	#Create the objectives and the problems
+	objectives = [cp.Minimize(y+q0_arr[i].T@x) for i in range(data.values.shape[0])]
+	problems = []
+	x_vals = []
+	y_vals = []
+	u_vals = []
+
+	for i in range(len(objectives)):
+		problems.append(cp.Problem(objectives[i], soc_constraints))
+		problems[i].solve()
+		x_vals.append(x.value)
+		y_vals.append(y.value)
+		u_vals.append(u.value)
+		
 	#Check that the solution work	
 	#	Initialize the sigmas
 	sigma0 = np.identity(2)
@@ -81,15 +90,16 @@ if __name__=="__main__":
 	sigmas = [sigma0, sigma1, sigma2, sigma3]
 	
 	#	Initialize the a vector
-	a0 = 1 + 0j
-	a1 = x.value[0] + 0j
-	a2 = x.value[1] + 0j
-	a3 = x.value[2] + 0j
-	a = [a0, a1, a2, a3]
+	a = []
+	for i in range(len(x_vals)):
+		a0 = 1 + 0j
+		a1 = x_vals[i][0] + 0j
+		a2 = x_vals[i][1] + 0j
+		a3 = x_vals[i][2] + 0j
+		a.append([a0, a1, a2, a3])
 
-	J = 0
-	for i in range(len(sigmas)):
-		J += 0.5 * (a[i]*sigmas[i])
-
-	print("The trace is: ", np.trace(J.dot(J)))
-	print("The coherency matrix is: \n", J)
+	J = np.zeros(shape=(data.values.shape[0], 2, 2), dtype=complex)
+	for i in range(data.values.shape[0]):
+		for j in range(len(sigmas)):
+			J[i] += 0.5 * (a[i][j]*sigmas[j])
+		print(np.trace(J[i].dot(J[i])))
