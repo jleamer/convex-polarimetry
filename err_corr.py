@@ -4,8 +4,8 @@ import cvxpy as cp
 import openpyxl as op
 from qutip import Bloch, Qobj
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
-fig = plt.figure(figsize=plt.figaspect(0.3))
 
 def bloch_from_dataframe(df, axes):
     """
@@ -16,7 +16,7 @@ def bloch_from_dataframe(df, axes):
     """
     bloch = Bloch(axes=axes)
 
-    bloch.vector_color = plt.cm.viridis(np.linspace(0, 1, len(df)))
+    bloch.vector_color = mpl.cm.viridis(np.linspace(0, 1, len(df)))
 
     bloch.add_states([
         Qobj(
@@ -138,7 +138,7 @@ if __name__=="__main__":
 	for i in range(data.values.shape[0]):
 		temp.append([data.values[i][0], J[i][0][0], J[i][1][1], np.real(J[i][0][1]), np.imag(J[i][0][1]), np.trace(J[i].dot(J[i]))])
 	temp = np.array(temp)
-	print(temp[0])
+	
 	results = pd.DataFrame(temp, columns=columns, dtype=float)
 
 	wb = pd.read_excel(filename, sheet_name=None)
@@ -152,6 +152,8 @@ if __name__=="__main__":
 	#######################################################################################
 	
 	#Plot on Bloch sphere
+	fig = plt.figure(1, figsize=plt.figaspect(0.3))
+
 	#First get results from measurement
 	ax = fig.add_subplot(121, projection='3d', azim=0, elev=20)
 	ax.set_title("Calculated from data")
@@ -165,9 +167,8 @@ if __name__=="__main__":
 	bloch_from_dataframe(pd.read_excel(filename, sheet_name='Adjusted'), ax)
 
 	#Set some plotting configs
-	import matplotlib as mpl
 	norm = mpl.colors.Normalize(vmin=0, vmax=90)
-	sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis, norm=norm)
+	sm = mpl.cm.ScalarMappable(cmap=plt.get_cmap('viridis'), norm=norm)
 	sm.set_array([])
 	fig.colorbar(sm, ticks=np.linspace(0, 90, 10))
              #boundaries=np.arange(-0.05,2.1,.1))
