@@ -2,7 +2,29 @@ import numpy as np
 import pandas as pd
 import cvxpy as cp
 import openpyxl as op
+from qutip import Bloch, Qobj
+import matplotlib.pyplot as plt
 
+fig = plt.figure(figsize=plt.figaspect(0.3))
+
+def bloch_from_dataframe(df, axes):
+    """
+    Plot Bloch sphere
+    :param df: pd.DataFrame
+    :param axes:
+    :return:
+    """
+    bloch = Bloch(axes=axes)
+
+    bloch.vector_color = plt.cm.viridis(np.linspace(0, 1, len(df)))
+
+    bloch.add_states([
+        Qobj(
+            [[row.Jxx, row.beta + 1j * row.gamma], [row.beta - 1j * row.gamma, row.Jyy]]
+        ) for _, row in df.iterrows()
+    ])
+
+    bloch.make_sphere()
 
 if __name__=="__main__":
 	
@@ -79,6 +101,8 @@ if __name__=="__main__":
 		y_vals.append(y.value)
 		u_vals.append(u.value)
 		
+	#######################################################################################
+
 	#Check that the solution work	
 	#	Initialize the sigmas
 	sigma0 = np.identity(2)
@@ -104,22 +128,48 @@ if __name__=="__main__":
 		for j in range(len(sigmas)):
 			J[i] += 0.5 * (a[i][j]*sigmas[j])
 
+	#######################################################################################
 
-#Write the coherency matrix entries to the excel spreadsheet
-#First construct the dataframe
-columns = ['theta', 'Jxx', 'Jyy', 'beta', 'gamma', 'trace']
-temp = []
-for i in range(data.values.shape[0]):
-	temp.append([data.values[i][0], J[i][0][0], J[i][1][1], np.real(J[i][0][1]), np.imag(J[i][0][1]), np.trace(J[i].dot(J[i]))])
-temp = np.array(temp)
-results = pd.DataFrame(temp, columns=columns)
-writer = pd.ExcelWriter(filename, mode='a')
+	#Write the coherency matrix entries to the excel spreadsheet
+	#First construct the dataframe
+	columns = ['theta', 'Jxx', 'Jyy', 'beta', 'gamma', 'trace']
+	
+	temp = []
+	for i in range(data.values.shape[0]):
+		temp.append([data.values[i][0], J[i][0][0], J[i][1][1], np.real(J[i][0][1]), np.imag(J[i][0][1]), np.trace(J[i].dot(J[i]))])
+	temp = np.array(temp)
+	print(temp[0])
+	results = pd.DataFrame(temp, columns=columns, dtype=float)
 
-wb = op.load_workbook(filename)
-try:
-	wb['Adjusted']
-except:
-	wb.create_sheet('Adjusted')
-wb.save(filename)
-results.to_excel(writer, sheet_name='Adjusted', index=False)
-writer.save()
+	wb = pd.read_excel(filename, sheet_name=None)
+	wb['Adjusted'] = results
+	with pd.ExcelWriter(filename) as writer:
+		for key in wb:
+			wb[key].to_excel(writer, sheet_name=key, index=False)
+	
+	
+
+	#######################################################################################
+	
+	#Plot on Bloch sphere
+	#First get results from measurement
+	ax = fig.add_subplot(121, projection='3d', azim=0, elev=20)
+	ax.set_title("Calculated from data")
+
+	bloch_from_dataframe(pd.read_excel(filename, sheet_name='calculated'), ax)
+
+	#Now get adjusted results
+	ax = fig.add_subplot(122, projection='3d', azim=0, elev=20)
+	ax.set_title("Adjusted")
+
+	bloch_from_dataframe(pd.read_excel(filename, sheet_name='Adjusted'), ax)
+
+	#Set some plotting configs
+	import matplotlib as mpl
+	norm = mpl.colors.Normalize(vmin=0, vmax=90)
+	sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis, norm=norm)
+	sm.set_array([])
+	fig.colorbar(sm, ticks=np.linspace(0, 90, 10))
+             #boundaries=np.arange(-0.05,2.1,.1))
+
+	plt.show()
