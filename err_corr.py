@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import cvxpy as cp
-
+import openpyxl as op
 
 
 if __name__=="__main__":
@@ -51,7 +51,8 @@ if __name__=="__main__":
 
 	#Read in data from excel sheet to construct q0
 	#Just for theta = 0 right now
-	data = pd.read_excel("11-19-19.xlsx", sheet_name='measured')
+	filename = "11-19-19.xlsx"
+	data = pd.read_excel(filename, sheet_name='measured')
 	I = np.array([data.values[i][1:5] for i in range(data.values.shape[0])])
 	q0_arr = []
 
@@ -102,4 +103,23 @@ if __name__=="__main__":
 	for i in range(data.values.shape[0]):
 		for j in range(len(sigmas)):
 			J[i] += 0.5 * (a[i][j]*sigmas[j])
-		print(np.trace(J[i].dot(J[i])))
+
+
+#Write the coherency matrix entries to the excel spreadsheet
+#First construct the dataframe
+columns = ['theta', 'Jxx', 'Jyy', 'beta', 'gamma', 'trace']
+temp = []
+for i in range(data.values.shape[0]):
+	temp.append([data.values[i][0], J[i][0][0], J[i][1][1], np.real(J[i][0][1]), np.imag(J[i][0][1]), np.trace(J[i].dot(J[i]))])
+temp = np.array(temp)
+results = pd.DataFrame(temp, columns=columns)
+writer = pd.ExcelWriter(filename, mode='a')
+
+wb = op.load_workbook(filename)
+try:
+	wb['Adjusted']
+except:
+	wb.create_sheet('Adjusted')
+wb.save(filename)
+results.to_excel(writer, sheet_name='Adjusted', index=False)
+writer.save()
