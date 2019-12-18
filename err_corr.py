@@ -5,6 +5,7 @@ import openpyxl as op
 from qutip import Bloch, Qobj
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import sys
 
 
 def bloch_from_dataframe(df, axes):
@@ -27,7 +28,15 @@ def bloch_from_dataframe(df, axes):
     bloch.make_sphere()
 
 if __name__=="__main__":
+
+	for i in range(1, len(sys.argv), 2):
+		argument = sys.argv[i]
+		argument_value = sys.argv[i + 1]
+		print(argument_value, argument)
+		if argument == '--filename':
+			filename = argument_value
 	
+	print(filename)
 	####################################################################################
 	#
 	#	Want to minimize the error expression:
@@ -45,6 +54,7 @@ if __name__=="__main__":
 	#
 	#
 	####################################################################################
+	
 	#Set up the vector variable to be optimized
 	#This is a 3D column vector with components a1, a2, & a3
 	x = cp.Variable(3)
@@ -73,7 +83,6 @@ if __name__=="__main__":
 
 	#Read in data from excel sheet to construct q0
 	#Just for theta = 0 right now
-	filename = "11-19-19.xlsx"
 	data = pd.read_excel(filename, sheet_name='measured')
 	I = np.array([data.values[i][1:5] for i in range(data.values.shape[0])])
 	q0_arr = []
