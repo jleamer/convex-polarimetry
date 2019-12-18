@@ -15,9 +15,9 @@ def bloch_from_dataframe(df, axes):
     :param axes:
     :return:
     """
-    bloch = Bloch(axes=axes)
+    bloch = Bloch(fig=fig, axes=axes)
 
-    bloch.vector_color = mpl.cm.viridis(np.linspace(0, 1, len(df)))
+    bloch.vector_color = plt.get_cmap('viridis')(np.linspace(0, 1, len(df)))
 
     bloch.add_states([
         Qobj(
