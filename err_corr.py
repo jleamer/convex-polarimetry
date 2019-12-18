@@ -32,11 +32,10 @@ if __name__=="__main__":
 	for i in range(1, len(sys.argv), 2):
 		argument = sys.argv[i]
 		argument_value = sys.argv[i + 1]
-		print(argument_value, argument)
 		if argument == '--filename':
 			filename = argument_value
 	
-	print(filename)
+	
 	####################################################################################
 	#
 	#	Want to minimize the error expression:
@@ -161,17 +160,19 @@ if __name__=="__main__":
 	#######################################################################################
 	
 	#Plot on Bloch sphere
-	fig = plt.figure(1, figsize=plt.figaspect(0.3))
+	fig = plt.figure(figsize=plt.figaspect(0.3))
+	fig_title = "Correction for " + filename
+	fig.suptitle(fig_title)
 
 	#First get results from measurement
 	ax = fig.add_subplot(121, projection='3d', azim=0, elev=20)
-	ax.set_title("Calculated from data")
+	ax.set_title("Calculated from data", loc='left')
 
 	bloch_from_dataframe(pd.read_excel(filename, sheet_name='calculated'), ax)
 
 	#Now get adjusted results
 	ax = fig.add_subplot(122, projection='3d', azim=0, elev=20)
-	ax.set_title("Adjusted")
+	ax.set_title("Adjusted", loc='left')
 
 	bloch_from_dataframe(pd.read_excel(filename, sheet_name='Adjusted'), ax)
 
@@ -179,7 +180,8 @@ if __name__=="__main__":
 	norm = mpl.colors.Normalize(vmin=0, vmax=90)
 	sm = mpl.cm.ScalarMappable(cmap=plt.get_cmap('viridis'), norm=norm)
 	sm.set_array([])
-	fig.colorbar(sm, ticks=np.linspace(0, 90, 10))
+	cbaxes = fig.add_axes([0.9, 0.1, 0.03, 0.8])
+	fig.colorbar(sm, ticks=np.linspace(0, 90, 10), cax=cbaxes)
              #boundaries=np.arange(-0.05,2.1,.1))
 
 	plt.show()
