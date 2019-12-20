@@ -15,7 +15,7 @@ def bloch_from_dataframe(df, axes):
     :param axes:
     :return:
     """
-    bloch = Bloch(fig=fig, axes=axes)
+    bloch = Bloch(fig=fig,axes=axes)
 
     bloch.vector_color = plt.get_cmap('viridis')(np.linspace(0, 1, len(df)))
 
@@ -104,7 +104,7 @@ if __name__=="__main__":
 
 	for i in range(len(objectives)):
 		problems.append(cp.Problem(objectives[i], soc_constraints))
-		problems[i].solve()
+		problems[i].solve(solver='CVXOPT')
 		x_vals.append(x.value)
 		y_vals.append(y.value)
 		u_vals.append(u.value)
@@ -146,7 +146,7 @@ if __name__=="__main__":
 	for i in range(data.values.shape[0]):
 		temp.append([data.values[i][0], J[i][0][0], J[i][1][1], np.real(J[i][0][1]), np.imag(J[i][0][1]), np.trace(J[i].dot(J[i]))])
 	temp = np.array(temp)
-	
+	print(temp)
 	results = pd.DataFrame(temp, columns=columns, dtype=float)
 
 	wb = pd.read_excel(filename, sheet_name=None)
