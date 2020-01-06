@@ -58,7 +58,7 @@ if __name__=="__main__":
 	#This is a 3D column vector with components a1, a2, & a3
 	x = cp.Variable(3)
 	y = cp.Variable()
-	u = cp.Variable(3)
+	#u = cp.Variable(3)
 
 	#Set up the parameters
 	p0 = cp.Parameter((3,3), nonneg=True)
@@ -76,7 +76,7 @@ if __name__=="__main__":
 	soc_constraints = [
       cp.SOC(c.T@x + d, A@x + b)
 	]
-	soc_constraints.append(cp.SOC(y, u))
+	#soc_constraints.append(cp.SOC(y, u))
 	soc_constraints.append(y >= 0)
 	soc_constraints.append(cp.norm(x) <= 1)
 
@@ -107,7 +107,7 @@ if __name__=="__main__":
 		problems[i].solve(solver='CVXOPT')
 		x_vals.append(x.value)
 		y_vals.append(y.value)
-		u_vals.append(u.value)
+		#u_vals.append(u.value)
 		
 	#######################################################################################
 
