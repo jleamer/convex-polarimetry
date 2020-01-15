@@ -58,7 +58,6 @@ def plot_Bloch(filename, fig_num):
     fig.colorbar(sm, ticks=np.linspace(0, 90, 10), cax=cbaxes)
              #boundaries=np.arange(-0.05,2.1,.1))
 
-
 def compute_rho(filename):
     """
     Least squares minimize the calculated coherency matrix
@@ -87,7 +86,7 @@ def compute_rho(filename):
         rho = cp.Variable((2, 2), PSD=True)
 
         #Construct constraint(s)
-        constraints = [cp.trace(cp.square(rho)) <= 1]
+        constraints = [cp.trace(rho) <= 1]
 
         #Construct cost function
         cost = cp.norm(J - rho) ** 2
@@ -109,7 +108,6 @@ def compute_rho(filename):
             wb[key].to_excel(writer, sheet_name=key, index=False)
 
 
-
 if __name__=="__main__":
 
     '''
@@ -121,9 +119,9 @@ if __name__=="__main__":
     '''
     #######################################################################
     #
-    #   Want to minimize E_i = (I_i - Tr(L_i * J * L_i^\dag))^2
+    #   Want to minimize || J_calc - rho || ** 2
     #
-    #   Subject to J >= 0 and Hermitian
+    #   Subject to J >= 0 and trace(J) <= 1
     #
     #######################################################################
 
@@ -143,5 +141,3 @@ if __name__=="__main__":
         fig_num += 1
 
     plt.show()
-    ####################################################################################
-    
