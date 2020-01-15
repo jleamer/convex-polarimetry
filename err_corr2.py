@@ -8,7 +8,7 @@ import matplotlib as mpl
 import sys
 
 
-def bloch_from_dataframe(df, axes):
+def bloch_from_dataframe(df, fig, axes):
     """
     Plot Bloch sphere
     :param df: pd.DataFrame
@@ -27,81 +27,88 @@ def bloch_from_dataframe(df, axes):
 
     bloch.make_sphere()
 
-def int_corr(filename):
+def plot_Bloch(filename, fig_num):
     """
-    Function to minimize the coherency matrix from the provided data
-    :param data: pd.DataFrame object
-    :return:     the list of minimized coherency matrices
+    Function for plotting the Bloch spheres created by bloch_from_dataframe
+    :param filename: name of the data file to be used for plotting (should be an excel file)
+    :param fig_num:  the number to be assigned to the figure
     """
-    wb = pd.read_excel(filename, sheet_name=None)
-    data = wb['measured']
-    size = data.values.shape[0]
-    min_J = []
-    columns = ['theta', 'Jxx', 'Jyy', 'beta', 'gamma', 'trace']
+    #Plot on Bloch sphere
+    fig = plt.figure(fig_num, figsize=plt.figaspect(0.3))
+    fig_title = "Correction for " + filename
+    fig.suptitle(fig_title)
 
-    #Slice the intensities out of the data file and normalize them
-    I = np.array([data.values[i][1:5] for i in range(size)])
-    for i in I:
-        i /= (i[0] + i[1])
+    #First get results from measurement
+    ax = fig.add_subplot(121, projection='3d', azim=0, elev=20)
+    ax.set_title("Calculated from data", loc='left')
+
+    bloch_from_dataframe(pd.read_excel(filename, sheet_name='calculated'), fig, ax)
+
+    #Now get adjusted results
+    ax = fig.add_subplot(122, projection='3d', azim=0, elev=20)
+    ax.set_title("Adjusted", loc='left')
+
+    bloch_from_dataframe(pd.read_excel(filename, sheet_name='rho'), fig, ax)
+
+    #Set some plotting configs
+    norm = mpl.colors.Normalize(vmin=0, vmax=90)
+    sm = mpl.cm.ScalarMappable(cmap=plt.get_cmap('viridis'), norm=norm)
+    sm.set_array([])
+    cbaxes = fig.add_axes([0.9, 0.1, 0.03, 0.8])
+    fig.colorbar(sm, ticks=np.linspace(0, 90, 10), cax=cbaxes)
+             #boundaries=np.arange(-0.05,2.1,.1))
+
+
+def compute_rho(filename):
+    """
+    Least squares minimize the calculated coherency matrix
+    :param filename: the name of the data file (should be an excel file)
+    """
+
+    #Construct the dataframe from the file
+    wb = pd.read_excel(filename, sheet_name=None)
+    data = wb['calculated']
+    size = data.values.shape[0]
+    columns = ['theta', 'Jxx', 'Jyy', 'beta', 'gamma', 'trace_sq']
+
+    #Slice coherency matrix elements from the data
+    J_elems = [data.values[i][1:5] for i in range(size)]
+
+    #Set up list for storing rhos
+    rho_list = []
+    temp = []
 
     for i in range(size):
-        J = cp.Variable((2, 2), PSD=True)
-        cost = cp.abs(I[i][0] -cp.trace((l1.conj().T).dot(l1) @ J)) ** 2 + \
-               cp.abs(I[i][1] -cp.trace((l2.conj().T).dot(l2) @ J)) ** 2 + \
-               cp.abs(I[i][2] -cp.trace((l3.conj().T).dot(l3) @ J)) ** 2 + \
-               cp.abs(I[i][3] -cp.trace((l4.conj().T).dot(l4) @ J)) ** 2
+        #Use J_elems to construct matrix
+        J = np.array([[J_elems[i][0], J_elems[i][2] + 1j*J_elems[i][3]],
+                      [J_elems[i][2] - 1j*J_elems[i][3], J_elems[i][1]]])
 
-        constraint = [cp.trace(J) <= 1]
-        prob = cp.Problem(cp.Minimize(cost), constraint)
-        prob.solve()
-        
-        min_J.append([data.values[i][0], J.value[0][0], J.value[1][1], np.real(J.value[0][1]), np.imag(J.value[0][1]), np.trace(J.value.dot(J.value))])
+        #Construct variable to be minimized
+        rho = cp.Variable((2, 2), PSD=True)
 
-    min_J = np.array(min_J)
-    temp = pd.DataFrame(min_J, columns=columns)
-    wb['adjusted'] = temp
+        #Construct constraint(s)
+        constraints = [cp.trace(cp.square(rho)) <= 1]
 
+        #Construct cost function
+        cost = cp.norm(J - rho) ** 2
+
+        #Construct problem
+        prob = cp.Problem(cp.Minimize(cost), constraints)
+        prob.solve(solver='CVXOPT')
+
+        rho_list.append(rho.value[0])
+
+        #Construct a temporary list to be added to the excel file
+        temp.append([data.values[i][0], rho.value[0][0], rho.value[1][1], np.real(rho.value[0][1]), np.imag(rho.value[0][1]), np.sum(rho.value.T*rho.value)])
+
+    #Construct the new dataframe and write to the file
+    results = pd.DataFrame(np.array(temp), columns=columns)
+    wb['rho'] = results
     with pd.ExcelWriter(filename) as writer:
         for key in wb:
             wb[key].to_excel(writer, sheet_name=key, index=False)
 
-def stokes_corr(filename):
-    """
-    Function to minimize the coherency matrix from the provided data
-    :param data: pd.DataFrame object
-    :return:     the list of minimized coherency matrices
-    """
-    wb = pd.read_excel(filename, sheet_name=None)
-    data = wb['measured']
-    size = data.values.shape[0]
-    min_J = []
-    columns = ['theta', 'Jxx', 'Jyy', 'beta', 'gamma', 'trace']
 
-    #Slice the Stokes parameters out of the data file and normalize them
-    S = np.array([data.values[i][1:5] for i in range(size)])
-    for s in S:
-        s /= s[0] 
-
-    for i in range(size):
-        J = cp.Variable((2, 2), PSD=True)
-        cost = (S[i][0] - (J[0][0] + J[1][1])) ** 2 + \
-               (S[i][1] - (J[0][0] - J[1][1])) ** 2 + \
-               (S[i][2] - 2 * np.real(J[0][1])) ** 2 + \
-               (S[i][3] - 2 * np.imag(J[0][1])) ** 2
-
-        constraint = [cp.trace(J) <= 1]
-        prob = cp.Problem(cp.Minimize(cost), constraint)
-        prob.solve()
-        
-        min_J.append([data.values[i][0], J.value[0][0], J.value[1][1], np.real(J.value[0][1]), np.imag(J.value[0][1]), np.trace(J.value.dot(J.value))])
-
-    min_J = np.array(min_J)
-    temp = pd.DataFrame(min_J, columns=columns)
-    wb['adjusted'] = temp
-
-    with pd.ExcelWriter(filename) as writer:
-        for key in wb:
-            wb[key].to_excel(writer, sheet_name=key, index=False)
 
 if __name__=="__main__":
 
@@ -128,53 +135,13 @@ if __name__=="__main__":
     l = [l1, l2, l3, l4]
 
     #Read in data from excel sheet and normalize intensities
-    filename = 'HWP_hand_low.xlsx'
-    int_corr(filename)
+    fig_num = 1
+    filename_list = ['HWP_hand_high.xlsx', 'HWP_polarimeter_high.xlsx', 'HWP_hand_low.xlsx', 'HWP_polarimeter_low.xlsx']
+    for filename in filename_list:
+        compute_rho(filename)
+        plot_Bloch(filename, fig_num)
+        fig_num += 1
 
-    filename2 = 'HWP_polarimeter_low.xlsx'
-    stokes_corr(filename)
-    
-
-    ####################################################################################
-
-    #Plot on Bloch sphere
-    fig = plt.figure(1, figsize=plt.figaspect(0.3))
-    fig_title = "Correction for " + filename
-    fig.suptitle(fig_title)
-
-    #First get results from measurement
-    ax = fig.add_subplot(121, projection='3d', azim=0, elev=20)
-    ax.set_title("Calculated from data", loc='left')
-
-    bloch_from_dataframe(pd.read_excel(filename, sheet_name='calculated'), ax)
-
-    #Now get adjusted results
-    ax = fig.add_subplot(122, projection='3d', azim=0, elev=20)
-    ax.set_title("Adjusted", loc='left')
-
-    bloch_from_dataframe(pd.read_excel(filename, sheet_name='adjusted'), ax)
-
-    #Set some plotting configs
-    norm = mpl.colors.Normalize(vmin=0, vmax=90)
-    sm = mpl.cm.ScalarMappable(cmap=plt.get_cmap('viridis'), norm=norm)
-    sm.set_array([])
-    cbaxes = fig.add_axes([0.9, 0.1, 0.03, 0.8])
-    fig.colorbar(sm, ticks=np.linspace(0, 90, 10), cax=cbaxes)
-             #boundaries=np.arange(-0.05,2.1,.1))
-
-    fig2 = plt.figure(2, figsize=plt.figaspect(0.3))
-    fig2_title = "Correction for " + filename2
-    fig2.suptitle(fig2_title)
-
-    ax2 = fig2.add_subplot(121, projection='3d', azim=0, elev=20)
-    ax2.set_title("Calculated from data", loc='left')
-
-    bloch_from_dataframe(pd.read_excel(filename2, sheet_name='calculated'), ax2)
-    
-    ax2 = fig2.add_subplot(122, projection='3d', azim=0, elev=20)
-    ax2.set_title("Adjusted", loc='left')
-
-    bloch_from_dataframe(pd.read_excel(filename2, sheet_name='adjusted'), ax2)
-    cbaxes = fig2.add_axes([0.9, 0.1, 0.03, 0.8])
-    fig2.colorbar(sm, ticks=np.linspace(0, 90, 10), cax=cbaxes)
     plt.show()
+    ####################################################################################
+    
