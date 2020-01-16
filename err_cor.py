@@ -107,6 +107,31 @@ def compute_rho(filename):
         for key in wb:
             wb[key].to_excel(writer, sheet_name=key, index=False)
 
+def plot_error(filename):
+    """
+    """
+    calc = pd.read_excel(filename, sheet_name='calculated')
+    rho = pd.read_excel(filename, sheet_name='rho')
+    size = calc.values.shape[0]
+
+    J_elems = [calc.values[i][1:5] for i in range(size)]
+    rho_elems = [rho.values[i][1:5] for i in range(size)]
+    theta = [calc.values[i][0] for i in range(size)]
+
+    error = []
+    for i in range(size):
+        J = np.array([[J_elems[i][0], J_elems[i][2] + 1j*J_elems[i][3]],
+                      [J_elems[i][2] - 1j*J_elems[i][3], J_elems[i][1]]])
+        rho = np.array([[rho_elems[i][0], rho_elems[i][2] + 1j*rho_elems[i][3]],
+                        [rho_elems[i][2] - 1j*rho_elems[i][3], rho_elems[i][1]]])
+        error.append(np.linalg.norm(J - rho))
+
+    fig = plt.figure(max(plt.get_fignums()) + 1)
+    ax = fig.add_subplot(111)
+    ax.set_title('Error for ' + filename)
+    ax.set_xlabel('theta')
+    ax.set_ylabel('Error')
+    ax.plot(theta, error)
 
 if __name__=="__main__":
 
@@ -140,4 +165,7 @@ if __name__=="__main__":
         plot_Bloch(filename, fig_num)
         fig_num += 1
 
+    for filename in filename_list:
+        plot_error(filename)
+        
     plt.show()
