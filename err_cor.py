@@ -86,7 +86,7 @@ def compute_rho(filename):
         rho = cp.Variable((2, 2), PSD=True)
 
         #Construct constraint(s)
-        constraints = [cp.trace(rho) <= 1]
+        constraints = [cp.trace(rho) == 1]
 
         #Construct cost function
         cost = cp.norm(J - rho) ** 2
@@ -167,5 +167,5 @@ if __name__=="__main__":
 
     for filename in filename_list:
         plot_error(filename)
-        
+
     plt.show()
