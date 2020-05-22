@@ -16,7 +16,7 @@ for i = 1:rows
              [complex(data(i,4), -data(i,5)), data(i,3)]];
          
         cvx_begin
-            variable rho(2,2) semidefinite complex
+            variables tau rho(2,2) semidefinite complex
             minimize(norm(rho-J, 2))
             subject to
                 trace(rho) == 1
