@@ -23,7 +23,7 @@ function computeRho(filename)
          
         cvx_begin quiet
             variable rho(2,2) semidefinite complex
-            minimize(norm(rho-J, 2))
+            minimize(norm(rho-J, 'fro'))
             subject to
                 trace(rho) == 1;
         cvx_end
@@ -31,11 +31,10 @@ function computeRho(filename)
         cvx_begin quiet
             variable rhomin(2,2) semidefinite complex
             variable tau
-            %maximize square_pos(norm(rhomin, 'fro'))
             minimize tau
             subject to 
-                norm(rhomin - tau*J - 0.5*(1-tau)*identity) <= 0
-                norm(rhomin - J) <= eps
+                norm(rhomin - tau*J - 0.5*(1-tau)*identity, 'fro') <= 0
+                norm(rhomin - J, 'fro') <= eps
                 trace(rhomin) == 1
         cvx_end
        
@@ -44,8 +43,8 @@ function computeRho(filename)
             variable tau
             maximize tau
             subject to
-                norm(rhomax - tau*J - 0.5*(1-tau)*identity) <= 0
-                norm(rhomax - J) <= eps
+                norm(rhomax - tau*J - 0.5*(1-tau)*identity, 'fro') <= 0
+                norm(rhomax - J, 'fro') <= eps
                 trace(rhomax) == 1
         cvx_end
         
